@@ -1,0 +1,69 @@
+  {
+  "nav": {
+    "order": "Bestellen",
+    "overview": "Übersicht",
+    "delivery": "Lieferung",
+    "balance": "Kontostand",
+    "users": "Benutzer"
+  },
+  "auth": {
+    "login": "Anmelden",
+    "logout": "Abmelden",
+    "username": "Benutzername",
+    "password": "Passwort",
+    "confirmPassword": "Passwort bestätigen",
+    "newPassword": "Neues Passwort",
+    "changePassword": "Passwort ändern",
+    "loginFailed": "Anmeldung fehlgeschlagen"
+  },
+  "order": {
+    "title": "Bestellung aufgeben",
+    "itemName": "Artikelname",
+    "price": "Preis",
+    "quantity": "Menge",
+    "total": "Gesamt",
+    "addItem": "Artikel hinzufügen",
+    "noItems": "Keine Artikel verfügbar"
+  },
+  "overview": {
+    "title": "Übersicht",
+    "orderOverview": "Bestellübersicht",
+    "allOrders": "Alle Gemeinschaftsbestellungen",
+    "editMode": "Bestellungen bearbeiten",
+    "viewMode": "Bestellungen anzeigen"
+  },
+  "delivery": {
+    "title": "Lieferung & Zahlung",
+    "totalAmount": "Gesamtbetrag",
+    "currentPrices": "Preise bearbeiten",
+    "paid": "Als bezahlt markieren"
+  },
+  "balance": {
+    "title": "Kontoübersicht",
+    "currentBalance": "Aktueller Kontostand",
+    "history": "Kontoverlauf",
+    "correction": "Kontokorrektur",
+    "correctionAmount": "Korrekturbetrag",
+    "correctionReason": "Grund der Korrektur"
+  },
+  "users": {
+    "title": "Benutzerverwaltung",
+    "addUser": "Benutzer hinzufügen",
+    "confirmDelete": "Sind Sie sicher, dass Sie diesen Benutzer löschen möchten?"
+  },
+  "common": {
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "item": "Artikel",
+    "price": "Preis",
+    "total": "Gesamt"
+  },
+  "validation": {
+    "required": "Dieses Feld ist erforderlich",
+    "invalidNumber": "Bitte geben Sie eine gültige Zahl ein",
+    "invalidAmount": "Bitte geben Sie einen gültigen Betrag ein",
+    "passwordMismatch": "Passwörter stimmen nicht überein"
+  }
+}
