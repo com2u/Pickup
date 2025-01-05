@@ -28,10 +28,13 @@ const Delivery = () => {
       setLoading(true);
       setError(null);
 
+      console.log('[Delivery] Fetching items and orders...');
       const [itemsResponse, ordersResponse] = await Promise.all([
         axios.get(`${config.apiUrl}/api/items`),
         axios.get(`${config.apiUrl}/api/orders`),
       ]);
+      console.log('[Delivery] Received items:', itemsResponse.data);
+      console.log('[Delivery] Received orders:', ordersResponse.data);
 
       const items = itemsResponse.data;
       setItems(items);
@@ -81,11 +84,13 @@ const Delivery = () => {
   const handleSavePrices = async () => {
     try {
       setError(null);
+      console.log('[Delivery] Saving updated prices:', editedPrices);
       await Promise.all(
         Object.entries(editedPrices).map(([itemId, price]) =>
           axios.put(`${config.apiUrl}/api/items/${itemId}`, { price })
         )
       );
+      console.log('[Delivery] Prices updated successfully');
       await fetchData();
       setEditPrices(false);
     } catch (err) {
@@ -111,11 +116,14 @@ const Delivery = () => {
       });
 
       // Send payment confirmation with user totals
-      await axios.post(`${config.apiUrl}/api/orders/confirm-delivery`, {
+      const confirmationData = {
         userId: user.id,
         total: total,
         userTotals: userTotals
-      });
+      };
+      console.log('[Delivery] Confirming payment:', confirmationData);
+      await axios.post(`${config.apiUrl}/api/orders/confirm-delivery`, confirmationData);
+      console.log('[Delivery] Payment confirmed successfully');
 
       await fetchData();
     } catch (err) {

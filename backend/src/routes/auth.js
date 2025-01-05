@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { db } = require('../db');
 const auth = require('../middleware/auth');
+const logger = require('../utils/logger');
 
 const router = express.Router();
 
@@ -22,12 +23,21 @@ router.post('/login', async (req, res) => {
         }
 
         if (!user) {
+          logger.warn('Login attempt with invalid username', {
+            timestamp: new Date().toISOString(),
+            attemptedUsername: username
+          });
           return res.status(401).json({ error: 'Invalid credentials' });
         }
 
         // Check password
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
+          logger.warn('Login attempt with invalid password', {
+            timestamp: new Date().toISOString(),
+            username: user.username,
+            userId: user.id
+          });
           return res.status(401).json({ error: 'Invalid credentials' });
         }
 
@@ -37,6 +47,13 @@ router.post('/login', async (req, res) => {
           process.env.JWT_SECRET || 'your-secret-key',
           { expiresIn: '24h' }
         );
+
+        // Log successful login
+        logger.info('User login successful', {
+          timestamp: new Date().toISOString(),
+          userId: user.id,
+          username: user.username
+        });
 
         // Return user info and token
         res.json({
@@ -50,7 +67,7 @@ router.post('/login', async (req, res) => {
       }
     );
   } catch (err) {
-    console.error('Login error:', err);
+    logger.error('Login error', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

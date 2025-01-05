@@ -40,10 +40,13 @@ const Order = () => {
     try {
       setLoading(true);
       setError(null);
+      console.log('[Order] Fetching items and orders...');
       const [itemsResponse, ordersResponse] = await Promise.all([
         axios.get(`${config.apiUrl}/api/items`),
         axios.get(`${config.apiUrl}/api/orders`),
       ]);
+      console.log('[Order] Received items:', itemsResponse.data);
+      console.log('[Order] Received orders:', ordersResponse.data);
 
       setItems(itemsResponse.data);
 
@@ -73,12 +76,19 @@ const Order = () => {
       }));
 
       // Send update to server
+      console.log('[Order] Sending batch update:', {
+        itemId,
+        quantity,
+        userId: user.id
+      });
       await axios.post(`${config.apiUrl}/api/orders/batch`, {
         orders: [{
           itemId: parseInt(itemId),
-          quantity: quantity || 0
+          quantity: quantity || 0,
+          userId: user.id  // Include the user ID from context
         }]
       });
+      console.log('[Order] Batch update successful');
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to update order');
       // Revert local state on error
@@ -96,7 +106,9 @@ const Order = () => {
   const handleAddItem = async (values, { setSubmitting, resetForm }) => {
     try {
       setError(null);
+      console.log('[Order] Adding new item:', values);
       await axios.post(`${config.apiUrl}/api/items`, values);
+      console.log('[Order] Item added successfully');
       await fetchData();
       setShowAddItem(false);
       resetForm();

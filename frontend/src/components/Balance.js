@@ -23,10 +23,13 @@ const Balance = () => {
       setLoading(true);
       setError(null);
 
+      console.log('[Balance] Fetching balances and history...');
       const [balancesResponse, historyResponse] = await Promise.all([
         axios.get(`${config.apiUrl}/api/orders/balances`),
         axios.get(`${config.apiUrl}/api/orders/balance-history`),
       ]);
+      console.log('[Balance] Received balances:', balancesResponse.data);
+      console.log('[Balance] Received history:', historyResponse.data);
 
       setBalances(balancesResponse.data);
       setHistory(historyResponse.data);
@@ -47,11 +50,14 @@ const Balance = () => {
   const handleCorrection = async (values, { setSubmitting, resetForm }) => {
     try {
       setError(null);
-      await axios.post(`${config.apiUrl}/api/orders/balance-correction`, {
+      const correctionData = {
         userId: selectedUser.id,
         amount: parseFloat(values.amount),
         description: values.description,
-      });
+      };
+      console.log('[Balance] Applying correction:', correctionData);
+      await axios.post(`${config.apiUrl}/api/orders/balance-correction`, correctionData);
+      console.log('[Balance] Correction applied successfully');
       await fetchData();
       setShowCorrectionForm(false);
       setSelectedUser(null);

@@ -28,11 +28,15 @@ const Overview = () => {
       setLoading(true);
       setError(null);
 
+      console.log('[Overview] Fetching users, items, and orders...');
       const [usersResponse, itemsResponse, ordersResponse] = await Promise.all([
         axios.get(`${config.apiUrl}/api/auth/users`),
         axios.get(`${config.apiUrl}/api/items`),
         axios.get(`${config.apiUrl}/api/orders`),
       ]);
+      console.log('[Overview] Received users:', usersResponse.data);
+      console.log('[Overview] Received items:', itemsResponse.data);
+      console.log('[Overview] Received orders:', ordersResponse.data);
 
       // Filter out unnecessary user data
       const filteredUsers = usersResponse.data.map(user => ({
@@ -65,13 +69,36 @@ const Overview = () => {
   };
 
   const handleQuantityChange = (userId, itemId, quantity) => {
-    setEditedOrders((prev) => ({
-      ...prev,
-      [userId]: {
-        ...(prev[userId] || {}),
-        [itemId]: quantity,
-      },
-    }));
+    setEditedOrders((prev) => {
+      // Create a new object to avoid mutating state
+      const newOrders = { ...prev };
+      
+      // Ensure the user object exists
+      if (!newOrders[userId]) {
+        newOrders[userId] = {};
+      }
+      
+      // If quantity is empty, undefined, or 0, delete the item from user's orders
+      if (!quantity) {
+        const userOrders = { ...newOrders[userId] };
+        delete userOrders[itemId];
+        
+        // If user has no orders, remove the user entry
+        if (Object.keys(userOrders).length === 0) {
+          delete newOrders[userId];
+        } else {
+          newOrders[userId] = userOrders;
+        }
+      } else {
+        // Add/update the order with valid quantity
+        newOrders[userId] = {
+          ...newOrders[userId],
+          [itemId]: quantity
+        };
+      }
+      
+      return newOrders;
+    });
   };
 
   const handleItemChange = (itemId, field, value) => {
@@ -87,7 +114,9 @@ const Overview = () => {
   const handleRemoveItem = async (itemId) => {
     try {
       setError(null);
+      console.log('[Overview] Removing item:', itemId);
       await axios.delete(`${config.apiUrl}/api/items/${itemId}`);
+      console.log('[Overview] Item removed successfully');
       await fetchData();
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to delete item');
@@ -99,22 +128,52 @@ const Overview = () => {
       setError(null);
 
       // Update items
+      console.log('[Overview] Updating items:', editedItems);
       await Promise.all(
         Object.entries(editedItems).map(([itemId, item]) =>
           axios.put(`${config.apiUrl}/api/items/${itemId}`, item)
         )
       );
+      console.log('[Overview] Items updated successfully');
 
-      // Update orders
+      // Transform orders for the API - only include orders with valid quantities
+      const validOrders = [];
+      
+      // Process each user's orders
+      for (const [userId, userOrders] of Object.entries(editedOrders)) {
+        const parsedUserId = parseInt(userId);
+        if (isNaN(parsedUserId)) continue;
+        
+        // Process each item order for this user
+        for (const [itemId, quantity] of Object.entries(userOrders)) {
+          const parsedItemId = parseInt(itemId);
+          const parsedQuantity = parseInt(quantity);
+          
+          // Only include orders with valid IDs and quantities
+          if (!isNaN(parsedItemId) && !isNaN(parsedQuantity)) {
+            // Always include userId in the order object
+            const order = {
+              userId: parsedUserId,  // This is the user who owns the order
+              itemId: parsedItemId,
+              quantity: parsedQuantity
+            };
+            
+            // Log the order being added for debugging
+            console.log('Adding order:', order);
+            
+            validOrders.push(order);
+          }
+        }
+      }
+
+      // Log all orders being sent
+      console.log('Sending orders to backend:', validOrders);
+
+      console.log('[Overview] Sending batch update for orders:', validOrders);
       await axios.post(`${config.apiUrl}/api/orders/batch`, {
-        orders: Object.entries(editedOrders).flatMap(([userId, userOrders]) =>
-          Object.entries(userOrders).map(([itemId, quantity]) => ({
-            userId: parseInt(userId),
-            itemId: parseInt(itemId),
-            quantity,
-          }))
-        ),
+        orders: validOrders,
       });
+      console.log('[Overview] Batch update successful');
 
       setOrders(editedOrders);
       setEditMode(false);
@@ -228,7 +287,7 @@ const Overview = () => {
                         min="0"
                         value={editedOrders[user.id]?.[item.id] || ''}
                         onChange={(e) =>
-                          handleQuantityChange(user.id, item.id, parseInt(e.target.value) || 0)
+                          handleQuantityChange(user.id, item.id, e.target.value)
                         }
                         className="w-20 px-2 py-1 text-center border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                         placeholder="0"

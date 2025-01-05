@@ -1,21 +1,25 @@
 const express = require('express');
 const { db } = require('../db');
 const auth = require('../middleware/auth');
+const logger = require('../utils/logger');
 
 const router = express.Router();
 
 // Get all orders
 router.get('/', auth, (req, res) => {
-  db.all(
-    `SELECT o.*, i.name as item_name, u.username 
+  const query = `SELECT o.*, i.name as item_name, u.username 
      FROM orders o 
      JOIN items i ON o.item_id = i.id 
      JOIN users u ON o.user_id = u.id 
-     ORDER BY o.created_at DESC`,
+     ORDER BY o.created_at DESC`;
+  logger.debug('Executing get all orders query', { query });
+  
+  db.all(
+    query,
     [],
     (err, orders) => {
       if (err) {
-        console.error('Database error:', err);
+        logger.error('Database error in get all orders:', err);
         return res.status(500).json({ error: 'Internal server error' });
       }
       res.json(orders);
@@ -32,25 +36,36 @@ router.post('/', auth, (req, res) => {
     return res.status(400).json({ error: 'Valid item ID and quantity are required' });
   }
 
+  const insertQuery = 'INSERT INTO orders (user_id, item_id, quantity) VALUES (?, ?, ?)';
+  const params = [userId, itemId, quantity];
+  logger.debug('Executing create order query', { query: insertQuery, params });
+  
   db.run(
-    'INSERT INTO orders (user_id, item_id, quantity) VALUES (?, ?, ?)',
-    [userId, itemId, quantity],
+    insertQuery,
+    params,
     function (err) {
       if (err) {
-        console.error('Database error:', err);
+        logger.error('Database error in create new order:', err);
         return res.status(500).json({ error: 'Internal server error' });
       }
 
-      db.get(
-        `SELECT o.*, i.name as item_name, u.username 
+      const selectQuery = `SELECT o.*, i.name as item_name, u.username 
          FROM orders o 
          JOIN items i ON o.item_id = i.id 
          JOIN users u ON o.user_id = u.id 
-         WHERE o.id = ?`,
+         WHERE o.id = ?`;
+      logger.debug('Executing get created order query', { 
+        query: selectQuery, 
+        params: [this.lastID],
+        lastInsertId: this.lastID 
+      });
+      
+      db.get(
+        selectQuery,
         [this.lastID],
         (err, order) => {
           if (err) {
-            console.error('Database error:', err);
+            logger.error('Database error in get created order:', err);
             return res.status(500).json({ error: 'Internal server error' });
           }
           res.status(201).json(order);
@@ -64,12 +79,18 @@ router.post('/', auth, (req, res) => {
 router.post('/batch', auth, (req, res) => {
   const { orders } = req.body;
   // Check if user is admin
+  const userQuery = 'SELECT username FROM users WHERE id = ?';
+  logger.debug('Executing get user query', { 
+    query: userQuery, 
+    params: [req.user.userId] 
+  });
+  
   db.get(
-    'SELECT username FROM users WHERE id = ?',
+    userQuery,
     [req.user.userId],
     (err, user) => {
       if (err) {
-        console.error('Database error:', err);
+        logger.error('Database error in get user for batch update:', err);
         return res.status(500).json({ error: 'Internal server error' });
       }
 
@@ -80,66 +101,157 @@ router.post('/batch', auth, (req, res) => {
         return res.status(400).json({ error: 'Orders must be an array' });
       }
 
-      db.serialize(() => {
+      db.serialize(async () => {
         db.run('BEGIN TRANSACTION');
 
         try {
-          // Process each order
-          for (const order of orders) {
-            // Only allow admin to update other users' orders
-            if (!isAdmin && order.userId !== userId) {
-              throw new Error('Unauthorized to update other users\' orders');
-            }
+          // Process orders sequentially using async/await
+          const processOrders = async () => {
+            for (const order of orders) {
+              // Only allow admin to update other users' orders
+              if (!isAdmin && order.userId !== userId) {
+                throw new Error('Unauthorized to update other users\' orders');
+              }
 
-            const orderUserId = isAdmin ? order.userId : userId;
+              // Log incoming order data for debugging
+              logger.debug('Processing order', { order });
 
-            if (order.quantity > 0) {
-              // Try to update existing order
-              db.run(
-                'UPDATE orders SET quantity = ? WHERE user_id = ? AND item_id = ?',
-                [order.quantity, orderUserId, order.itemId],
-                function(err) {
-                  if (err) {
-                    throw err;
-                  }
-                  // If no rows were updated, insert new order
-                  if (this.changes === 0) {
-                    db.run(
-                      'INSERT INTO orders (user_id, item_id, quantity) VALUES (?, ?, ?)',
-                      [orderUserId, order.itemId, order.quantity],
-                      (err) => {
+              // Validate order data
+              if (!order || typeof order !== 'object') {
+                logger.error('Invalid order format', { order });
+                throw new Error('Invalid order format');
+              }
+
+              const orderUserId = isAdmin ? order.userId : userId;
+              const itemId = order.itemId;
+              const quantity = order.quantity;
+
+              // Log parsed values for debugging
+              logger.debug('Parsed order values', { 
+                orderUserId, 
+                itemId, 
+                quantity,
+                isAdmin,
+                originalUserId: order.userId
+              });
+
+              // Detailed field validation
+              const validationErrors = [];
+              if (!orderUserId) validationErrors.push('missing user_id');
+              if (!itemId) validationErrors.push('missing item_id');
+              if (quantity === undefined || quantity === null) validationErrors.push('missing quantity');
+              if (typeof quantity !== 'number') validationErrors.push('quantity must be a number');
+
+              if (validationErrors.length > 0) {
+                const errorMessage = `Validation failed: ${validationErrors.join(', ')}`;
+                logger.error(errorMessage, { orderUserId, itemId, quantity });
+                throw new Error(errorMessage);
+              }
+
+              // Process order based on quantity
+              if (quantity && quantity > 0) {
+                logger.debug('Processing order with quantity > 0', { quantity });
+                
+                // Try to update existing order
+                await new Promise((resolve, reject) => {
+                  const updateQuery = 'UPDATE orders SET quantity = ? WHERE user_id = ? AND item_id = ?';
+                  const updateParams = [quantity, orderUserId, itemId];
+                  logger.debug('Executing update order query', { 
+                    query: updateQuery, 
+                    params: updateParams 
+                  });
+                  
+                  db.run(updateQuery, updateParams, function(err) {
+                    if (err) {
+                      logger.error('Error updating order:', err);
+                      reject(new Error(`Failed to update order: ${err.message}`));
+                      return;
+                    }
+                    
+                    // If no rows were updated, insert new order
+                    if (this.changes === 0) {
+                      logger.debug('No existing order found, inserting new order', {
+                        orderUserId,
+                        itemId,
+                        quantity
+                      });
+
+                      const insertQuery = 'INSERT INTO orders (user_id, item_id, quantity) VALUES (?, ?, ?)';
+                      const insertParams = [orderUserId, itemId, quantity];
+                      logger.debug('Executing insert order query', { 
+                        query: insertQuery, 
+                        params: insertParams 
+                      });
+                      
+                      db.run(insertQuery, insertParams, function(err) {
                         if (err) {
-                          throw err;
+                          logger.error('Error inserting order:', err);
+                          reject(new Error(`Failed to insert order: ${err.message}`));
+                          return;
                         }
-                      }
-                    );
-                  }
-                }
-              );
-            } else {
-              // Delete order if quantity is 0
-              db.run(
-                'DELETE FROM orders WHERE user_id = ? AND item_id = ?',
-                [orderUserId, order.itemId],
-                (err) => {
-                  if (err) {
-                    throw err;
-                  }
-                }
-              );
+                        logger.debug('Successfully inserted new order', {
+                          lastID: this.lastID,
+                          changes: this.changes
+                        });
+                        resolve();
+                      });
+                    } else {
+                      resolve();
+                    }
+                  });
+                });
+              } else if (quantity === 0) {
+                logger.debug('Processing order with quantity = 0 (delete)');
+                
+                // Delete order
+                await new Promise((resolve, reject) => {
+                  const deleteQuery = 'DELETE FROM orders WHERE user_id = ? AND item_id = ?';
+                  const deleteParams = [orderUserId, itemId];
+                  logger.debug('Executing delete order query', { 
+                    query: deleteQuery, 
+                    params: deleteParams 
+                  });
+                  
+                  db.run(deleteQuery, deleteParams, (err) => {
+                    if (err) {
+                      logger.error('Error deleting order:', err);
+                      reject(new Error(`Failed to delete order: ${err.message}`));
+                      return;
+                    }
+                    resolve();
+                  });
+                });
+              }
             }
-          }
+          };
 
-          db.run('COMMIT', (err) => {
-            if (err) {
-              throw err;
-            }
+          try {
+            // Process all orders and commit
+            await processOrders();
+            
+            await new Promise((resolve, reject) => {
+              db.run('COMMIT', (err) => {
+                if (err) {
+                  logger.error('Error committing transaction:', err);
+                  reject(new Error(`Failed to commit transaction: ${err.message}`));
+                  return;
+                }
+                resolve();
+              });
+            });
+
             res.json({ message: 'Orders updated successfully' });
-          });
+          } catch (err) {
+            throw err;
+          }
         } catch (err) {
           db.run('ROLLBACK');
-          console.error('Database error:', err);
-          return res.status(500).json({ error: 'Internal server error' });
+          logger.error('Error in batch order processing:', err);
+          // Send more specific error message to client
+          return res.status(400).json({ 
+            error: err.message || 'Failed to process orders',
+            details: err.code === 'SQLITE_CONSTRAINT' ? 'Database constraint violation - check required fields' : undefined
+          });
         }
       });
     }
@@ -164,10 +276,17 @@ router.post('/confirm-delivery', auth, (req, res) => {
       );
 
       // Get user IDs from usernames
+      const userQuery = 'SELECT id, username FROM users WHERE username IN (' + 
+        Object.keys(userTotals).map(() => '?').join(',') + ')';
+      const userParams = Object.keys(userTotals);
+      logger.debug('Executing get users query', { 
+        query: userQuery, 
+        params: userParams 
+      });
+      
       db.all(
-        'SELECT id, username FROM users WHERE username IN (' + 
-        Object.keys(userTotals).map(() => '?').join(',') + ')',
-        Object.keys(userTotals),
+        userQuery,
+        userParams,
         (err, users) => {
           if (err) throw err;
 
@@ -205,7 +324,7 @@ router.post('/confirm-delivery', auth, (req, res) => {
       );
     } catch (err) {
       db.run('ROLLBACK');
-      console.error('Database error:', err);
+      logger.error('Error in balance history:', err);
       return res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -213,17 +332,20 @@ router.post('/confirm-delivery', auth, (req, res) => {
 
 // Get user balances
 router.get('/balances', auth, (req, res) => {
-  db.all(
-    `SELECT u.id, u.username,
+  const balanceQuery = `SELECT u.id, u.username,
             COALESCE(SUM(bh.amount), 0) as current_balance
      FROM users u
      LEFT JOIN balance_history bh ON u.id = bh.user_id
      GROUP BY u.id
-     ORDER BY u.username`,
+     ORDER BY u.username`;
+  logger.debug('Executing get balances query', { query: balanceQuery });
+  
+  db.all(
+    balanceQuery,
     [],
     (err, balances) => {
       if (err) {
-        console.error('Database error:', err);
+        logger.error('Error getting user balances:', err);
         return res.status(500).json({ error: 'Internal server error' });
       }
       res.json(balances);
@@ -233,15 +355,18 @@ router.get('/balances', auth, (req, res) => {
 
 // Get balance history
 router.get('/balance-history', auth, (req, res) => {
-  db.all(
-    `SELECT bh.*, u.username
+  const historyQuery = `SELECT bh.*, u.username
      FROM balance_history bh
      JOIN users u ON bh.user_id = u.id
-     ORDER BY bh.created_at DESC`,
+     ORDER BY bh.created_at DESC`;
+  logger.debug('Executing get balance history query', { query: historyQuery });
+  
+  db.all(
+    historyQuery,
     [],
     (err, history) => {
       if (err) {
-        console.error('Database error:', err);
+        logger.error('Error getting balance history:', err);
         return res.status(500).json({ error: 'Internal server error' });
       }
       res.json(history);
@@ -259,12 +384,19 @@ router.post('/balance-correction', auth, (req, res) => {
     });
   }
 
+  const correctionQuery = 'INSERT INTO balance_history (user_id, amount, description) VALUES (?, ?, ?)';
+  const correctionParams = [userId, amount, description];
+  logger.debug('Executing balance correction query', { 
+    query: correctionQuery, 
+    params: correctionParams 
+  });
+  
   db.run(
-    'INSERT INTO balance_history (user_id, amount, description) VALUES (?, ?, ?)',
-    [userId, amount, description],
+    correctionQuery,
+    correctionParams,
     function (err) {
       if (err) {
-        console.error('Database error:', err);
+        logger.error('Error in balance correction:', err);
         return res.status(500).json({ error: 'Internal server error' });
       }
 

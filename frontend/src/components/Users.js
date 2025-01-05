@@ -30,7 +30,9 @@ const Users = () => {
     try {
       setLoading(true);
       setError(null);
+      console.log('[Users] Fetching users...');
       const response = await axios.get(`${config.apiUrl}/api/auth/users`);
+      console.log('[Users] Received users:', response.data);
       setUsers(response.data);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to fetch users');
@@ -57,10 +59,12 @@ const Users = () => {
   const handleAddUser = async (values, { setSubmitting, resetForm }) => {
     try {
       setError(null);
+      console.log('[Users] Adding new user:', { username: values.username });
       await axios.post(`${config.apiUrl}/api/auth/register`, {
         username: values.username,
         password: values.password,
       });
+      console.log('[Users] User added successfully');
       await fetchUsers();
       setShowAddUser(false);
       resetForm();
@@ -74,9 +78,11 @@ const Users = () => {
   const handleChangePassword = async (values, { setSubmitting, resetForm }) => {
     try {
       setError(null);
+      console.log('[Users] Changing password for user:', selectedUser.username);
       await axios.post(`${config.apiUrl}/api/auth/users/${selectedUser.id}/password`, {
         password: values.password,
       });
+      console.log('[Users] Password changed successfully');
       setShowPasswordForm(false);
       setSelectedUser(null);
       resetForm();
@@ -94,7 +100,9 @@ const Users = () => {
 
     try {
       setError(null);
+      console.log('[Users] Deleting user:', userId);
       await axios.delete(`${config.apiUrl}/api/auth/users/${userId}`);
+      console.log('[Users] User deleted successfully');
       await fetchUsers();
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to delete user');
