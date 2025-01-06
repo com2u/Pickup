@@ -14,8 +14,16 @@ const Balance = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [showCorrectionForm, setShowCorrectionForm] = useState(false);
 
+  // Deep compare objects to check if data has actually changed
+  const hasDataChanged = (oldData, newData) => {
+    return JSON.stringify(oldData) !== JSON.stringify(newData);
+  };
+
   useEffect(() => {
     fetchData();
+    // Auto-refresh every 10 seconds
+    const interval = setInterval(fetchData, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchData = async () => {
@@ -31,8 +39,13 @@ const Balance = () => {
       console.log('[Balance] Received balances:', balancesResponse.data);
       console.log('[Balance] Received history:', historyResponse.data);
 
-      setBalances(balancesResponse.data);
-      setHistory(historyResponse.data);
+      // Only update state if data has changed
+      if (hasDataChanged(balances, balancesResponse.data)) {
+        setBalances(balancesResponse.data);
+      }
+      if (hasDataChanged(history, historyResponse.data)) {
+        setHistory(historyResponse.data);
+      }
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to fetch data');
     } finally {

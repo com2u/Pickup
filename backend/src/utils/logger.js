@@ -1,27 +1,39 @@
 const fs = require('fs');
 const path = require('path');
+const config = require('../config');
 
 // Ensure logs directory exists
-const logsDir = path.join(__dirname, '..', 'logs');
+const logsDir = path.dirname(config.logging.file);
 if (!fs.existsSync(logsDir)) {
     fs.mkdirSync(logsDir, { recursive: true });
 }
 
-const logFile = path.join(logsDir, 'backend.log');
-
 // Create write stream for logging
-const logStream = fs.createWriteStream(logFile, { flags: 'a' });
+const logStream = fs.createWriteStream(config.logging.file, { flags: 'a' });
 
 // Format timestamp for log entries
 const getTimestamp = () => new Date().toISOString();
 
-// Log levels
+// Log levels with numeric values for comparison
 const LogLevel = {
-    INFO: 'INFO',
-    ERROR: 'ERROR',
-    DEBUG: 'DEBUG',
-    WARN: 'WARN'
+    ERROR: 0,
+    WARN: 1,
+    INFO: 2,
+    DEBUG: 3,
+    // Convert string level to numeric value
+    toNumber: (level) => {
+        switch (level.toLowerCase()) {
+            case 'error': return 0;
+            case 'warn': return 1;
+            case 'info': return 2;
+            case 'debug': return 3;
+            default: return 2; // default to INFO
+        }
+    }
 };
+
+// Get configured log level
+const configuredLevel = LogLevel.toNumber(config.logging.level);
 
 // Format message with timestamp and level
 const formatMessage = (level, message, details = null) => {
@@ -42,37 +54,50 @@ const formatMessage = (level, message, details = null) => {
     return logMessage + '\n';
 };
 
+// Should log check based on configured level
+const shouldLog = (level) => {
+    return LogLevel.toNumber(level) <= configuredLevel;
+};
+
 // Logger functions
 const logger = {
     info: (message, details = null) => {
-        const logMessage = formatMessage(LogLevel.INFO, message, details);
-        logStream.write(logMessage);
-        if (process.env.NODE_ENV !== 'production') {
-            console.log(logMessage);
+        if (shouldLog('info')) {
+            const logMessage = formatMessage('INFO', message, details);
+            logStream.write(logMessage);
+            if (config.server.env !== 'production') {
+                console.log(logMessage);
+            }
         }
     },
 
     error: (message, error = null) => {
-        const logMessage = formatMessage(LogLevel.ERROR, message, error);
-        logStream.write(logMessage);
-        if (process.env.NODE_ENV !== 'production') {
-            console.error(logMessage);
+        if (shouldLog('error')) {
+            const logMessage = formatMessage('ERROR', message, error);
+            logStream.write(logMessage);
+            if (config.server.env !== 'production') {
+                console.error(logMessage);
+            }
         }
     },
 
     debug: (message, details = null) => {
-        if (process.env.NODE_ENV !== 'production') {
-            const logMessage = formatMessage(LogLevel.DEBUG, message, details);
+        if (shouldLog('debug')) {
+            const logMessage = formatMessage('DEBUG', message, details);
             logStream.write(logMessage);
-            console.debug(logMessage);
+            if (config.server.env !== 'production') {
+                console.debug(logMessage);
+            }
         }
     },
 
     warn: (message, details = null) => {
-        const logMessage = formatMessage(LogLevel.WARN, message, details);
-        logStream.write(logMessage);
-        if (process.env.NODE_ENV !== 'production') {
-            console.warn(logMessage);
+        if (shouldLog('warn')) {
+            const logMessage = formatMessage('WARN', message, details);
+            logStream.write(logMessage);
+            if (config.server.env !== 'production') {
+                console.warn(logMessage);
+            }
         }
     }
 };

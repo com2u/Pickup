@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, ProtectedRoute } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import './i18n';
 import Layout from './components/Layout';
 import Login from './components/Login';
@@ -14,6 +15,7 @@ function App() {
   return (
     <Router>
       <AuthProvider>
+        <ThemeProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route
@@ -33,6 +35,7 @@ function App() {
           </Route>
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
+        </ThemeProvider>
       </AuthProvider>
     </Router>
   );

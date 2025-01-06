@@ -108,9 +108,10 @@ router.post('/batch', auth, (req, res) => {
           // Process orders sequentially using async/await
           const processOrders = async () => {
             for (const order of orders) {
-              // Only allow admin to update other users' orders
-              if (!isAdmin && order.userId !== userId) {
-                throw new Error('Unauthorized to update other users\' orders');
+              // Non-admin users can only update their own orders
+              if (!isAdmin) {
+                // Force the order's userId to be the current user's id
+                order.userId = userId;
               }
 
               // Log incoming order data for debugging
@@ -122,7 +123,7 @@ router.post('/batch', auth, (req, res) => {
                 throw new Error('Invalid order format');
               }
 
-              const orderUserId = isAdmin ? order.userId : userId;
+              const orderUserId = order.userId;
               const itemId = order.itemId;
               const quantity = order.quantity;
 

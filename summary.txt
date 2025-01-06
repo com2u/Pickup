@@ -1,0 +1,253 @@
+Project Structure and Usage
+=======================
+
+Root Directory
+-------------
+├── docker-compose.yml       # Main Docker configuration for all services
+├── setup-docker.sh         # Setup script for Docker environment
+├── recreate-db.sh         # Script to reset and initialize database
+└── data/                  # Persistent data directory (created by Docker)
+    ├── db/                # Database files
+    └── logs/              # Application logs
+
+Frontend (./frontend)
+-------------------
+├── Dockerfile            # Frontend container build configuration
+├── nginx.conf           # Nginx web server configuration
+├── .env                 # Runtime environment variables
+├── .env.example         # Example environment configuration
+├── .dockerignore        # Files to exclude from Docker build
+└── src/
+    ├── components/      # React components
+    │   ├── Layout.js    # Main application layout
+    │   ├── Login.js     # Login page
+    │   ├── Order.js     # Order management
+    │   ├── Overview.js  # Dashboard view
+    │   ├── Delivery.js  # Delivery management
+    │   ├── Balance.js   # Balance/payment view
+    │   ├── Users.js     # User management (admin)
+    │   └── ItemList.js  # Reusable item listing
+    ├── contexts/        # React context providers
+    │   ├── AuthContext.js    # Authentication state
+    │   └── ThemeContext.js   # Theme management
+    ├── config.js        # Application configuration
+    └── index.js         # Application entry point
+
+Backend (./backend)
+------------------
+├── Dockerfile           # Backend container build configuration
+├── .env                # Runtime environment variables
+├── .env.example        # Example environment configuration
+├── .dockerignore       # Files to exclude from Docker build
+└── src/
+    ├── index.js        # Server entry point
+    ├── config.js       # Server configuration
+    ├── db/             # Database management
+    │   ├── index.js    # Database connection
+    │   └── init.js     # Database initialization
+    ├── middleware/     # Express middleware
+    │   └── auth.js     # Authentication middleware
+    ├── routes/         # API routes
+    │   ├── auth.js     # Authentication endpoints
+    │   ├── items.js    # Item management
+    │   └── orders.js   # Order management
+    └── utils/
+        └── logger.js   # Application logging
+
+Application Overview
+------------------
+The Pickup application is a web-based order management system with the following features:
+1. User Authentication
+   - Login/logout functionality
+   - Role-based access (admin/regular users)
+   - JWT token-based authentication
+
+2. Order Management
+   - Create and modify orders
+   - Real-time order updates
+   - Order history tracking
+
+3. Item Management
+   - Item catalog
+   - Price management
+   - Stock tracking
+
+4. Delivery Tracking
+   - Delivery status updates
+   - Delivery scheduling
+   - Location tracking
+
+5. User Management (Admin)
+   - User creation and deletion
+   - Password management
+   - User role assignment
+
+Component Relationships
+---------------------
+1. Frontend Components:
+   - Layout.js: Contains navigation and theme switching
+   - AuthContext: Manages user session across all components
+   - ThemeContext: Handles dark/light mode preferences
+   - ItemList: Reused in Order.js and Overview.js
+
+2. Backend Services:
+   - auth.js: Handles user authentication and session management
+   - orders.js: Manages order CRUD operations
+   - items.js: Handles item catalog and inventory
+
+3. Data Flow:
+   - Frontend → Nginx → Backend API → SQLite Database
+   - Real-time updates through periodic polling
+   - Client-side state management with React Context
+
+Key Files and Their Purpose
+--------------------------
+1. Docker Configuration:
+   - docker-compose.yml: Defines services, networks, and volumes
+   - */Dockerfile: Container build instructions
+   - */nginx.conf: Web server and reverse proxy configuration
+   - setup-docker.sh: Environment setup and initialization
+
+2. Environment Files:
+   - */.env: Runtime configuration (IP, ports, database, etc.)
+   - */.env.example: Template for environment configuration
+   - */config.js: Application configuration loaders
+
+3. Frontend Components:
+   - Layout.js: Main application structure and navigation
+   - Order.js: Order creation and management
+   - Overview.js: Dashboard and statistics
+   - ItemList.js: Reusable component for item display
+
+4. Backend Services:
+   - routes/*.js: API endpoint implementations
+   - middleware/auth.js: Authentication and authorization
+   - db/init.js: Database schema and initial data
+
+Data Persistence
+---------------
+1. Database:
+   - Location: data/db/pickup.db
+   - Type: SQLite
+   - Initialization: recreate-db.sh
+
+2. Logs:
+   - Location: data/logs/
+   - Backend logs: app.log
+   - Nginx access logs: Standard Docker logging
+
+Docker Configuration
+------------------
+1. Container Architecture:
+   - Frontend Container:
+     * Nginx serving static React build
+     * Health check endpoint at /health
+     * Environment variables injected at build time
+   
+   - Backend Container:
+     * Node.js Express server
+     * SQLite database
+     * Volume mounts for persistence
+     * Non-root user for security
+
+2. Networking:
+   - Internal Docker network for service communication
+   - Frontend exposed on port 80
+   - Backend exposed on port 3002
+   - CORS configured for cross-origin requests
+
+3. Volume Management:
+   - Database persistence: db_data volume
+   - Log persistence: log_data volume
+   - Host-mounted volumes for easy access
+
+4. Security Considerations:
+   - Non-root container users
+   - Read-only environment files
+   - Secure headers in nginx
+   - JWT token authentication
+
+Environment Setup and Deployment
+------------------------------
+1. Initial Setup:
+   ```bash
+   ./setup-docker.sh
+   ```
+
+2. Build and Run:
+   ```bash
+   docker-compose build --no-cache
+   docker-compose up -d
+   ```
+
+3. Access Points:
+   - Frontend: http://<host-ip>:80
+   - Backend API: http://<host-ip>:3002
+   - API Documentation: http://<host-ip>:3002/api-docs
+
+4. Monitoring:
+   - Container Health:
+     ```bash
+     docker-compose ps
+     docker-compose logs -f
+     ```
+   - Application Logs:
+     * Backend: data/logs/app.log
+     * Nginx: docker logs pickup_frontend_1
+
+5. Backup and Maintenance:
+   - Database backup: Copy data/db/pickup.db
+   - Log rotation: Handled by Docker
+   - Container updates: Rebuild with docker-compose build
+
+Development Workflow
+------------------
+1. Local Development:
+   - Frontend:
+     ```bash
+     cd frontend
+     npm install
+     npm start     # Runs on localhost:3000
+     ```
+   - Backend:
+     ```bash
+     cd backend
+     npm install
+     npm start     # Runs on localhost:3002
+     ```
+
+2. Code Changes:
+   - Frontend: Hot reload available in development
+   - Backend: Nodemon restarts on file changes
+   - Docker: Rebuild required for container changes
+
+3. Testing:
+   - Frontend: React Testing Library
+   - Backend: Jest for unit tests
+   - API: Postman/curl for endpoint testing
+
+Troubleshooting
+--------------
+1. Container Issues:
+   ```bash
+   # Check container status
+   docker-compose ps
+   
+   # View logs
+   docker-compose logs -f [service]
+   
+   # Restart services
+   docker-compose restart [service]
+   ```
+
+2. Common Problems:
+   - Port conflicts: Check ports 80 and 3002
+   - Database errors: Check data/db permissions
+   - CORS issues: Verify frontend API_URL
+   - Build errors: Clear Docker cache and rebuild
+
+3. Debug Tools:
+   - Chrome DevTools for frontend
+   - VS Code debugger for backend
+   - Docker logs for container issues
+   - SQLite browser for database inspection

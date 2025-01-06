@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - REACT_APP_API_URL=http://pickupapi.com2u.selfhost.eu
+    ports:
+      - "80:80"
+    environment:
+      - REACT_APP_API_URL=http://pickupapi.com2u.selfhost.eu
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:80/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - pickup_network
+
+  backend:
+    container_name: pickup_backend  # Fixed container name for nginx proxy
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:  # Changed from expose to ports to allow external access
+      - "3002:3002"
+    volumes:
+      - db_data:/app/src/db
+      - log_data:/app/src/logs
+    environment:
+      - PORT=3002
+      - HOST=0.0.0.0
+      - NODE_ENV=production
+      - DB_PATH=/app/src/db
+      - DB_FILENAME=pickup.db
+      - CORS_ORIGIN=http://pickup.com2u.selfhost.eu
+      - LOG_LEVEL=info
+      - LOG_FILE=/app/src/logs/app.log
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://pickupapi.com2u.selfhost.eu/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - pickup_network
+
+networks:
+  pickup_network:
+    driver: bridge
+
+volumes:
+  db_data:
+    driver: local
+  log_data:
+    driver: local

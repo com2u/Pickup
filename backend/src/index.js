@@ -5,17 +5,24 @@ const { initDatabase } = require('./db/init');
 const authRoutes = require('./routes/auth');
 const itemsRoutes = require('./routes/items');
 const ordersRoutes = require('./routes/orders');
+const config = require('./config');
 
 const app = express();
-const port = process.env.PORT || 3002;
 
 // Initialize database
 initDatabase();
 
 // Middleware
-app.use(cors());
-app.use(morgan('dev'));
+app.use(cors({
+  origin: config.cors.origin
+}));
+app.use(morgan(config.server.env === 'development' ? 'dev' : 'combined'));
 app.use(express.json());
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).send('healthy');
+});
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -28,6 +35,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Something broke!' });
 });
 
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+app.listen(config.server.port, config.server.host, () => {
+  console.log(`Server running at http://${config.server.host}:${config.server.port}`);
+  console.log(`Environment: ${config.server.env}`);
 });

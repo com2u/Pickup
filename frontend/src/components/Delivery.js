@@ -14,11 +14,16 @@ const Delivery = () => {
   const [editPrices, setEditPrices] = useState(false);
   const [editedPrices, setEditedPrices] = useState({});
 
+  // Deep compare objects to check if data has actually changed
+  const hasDataChanged = (oldData, newData) => {
+    return JSON.stringify(oldData) !== JSON.stringify(newData);
+  };
+
   useEffect(() => {
     fetchData();
     // Only auto-refresh when not editing prices
     if (!editPrices) {
-      const interval = setInterval(fetchData, 5000);
+      const interval = setInterval(fetchData, 10000); // Increased to 10 seconds
       return () => clearInterval(interval);
     }
   }, [editPrices]);
@@ -36,12 +41,17 @@ const Delivery = () => {
       console.log('[Delivery] Received items:', itemsResponse.data);
       console.log('[Delivery] Received orders:', ordersResponse.data);
 
-      const items = itemsResponse.data;
-      setItems(items);
-      setEditedPrices(items.reduce((acc, item) => {
-        acc[item.id] = item.price;
-        return acc;
-      }, {}));
+      const newItems = itemsResponse.data;
+      // Only update items if they've changed
+      if (hasDataChanged(items, newItems)) {
+        setItems(newItems);
+        if (!editPrices) {
+          setEditedPrices(newItems.reduce((acc, item) => {
+            acc[item.id] = item.price;
+            return acc;
+          }, {}));
+        }
+      }
 
       // Group orders by item and user
       const ordersByItem = ordersResponse.data.reduce((acc, order) => {
@@ -66,7 +76,11 @@ const Delivery = () => {
         return acc;
       }, {});
 
-      setOrders(Object.values(ordersByItem));
+      const newOrders = Object.values(ordersByItem);
+      // Only update orders if they've changed
+      if (hasDataChanged(orders, newOrders)) {
+        setOrders(newOrders);
+      }
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to fetch data');
     } finally {
@@ -86,9 +100,14 @@ const Delivery = () => {
       setError(null);
       console.log('[Delivery] Saving updated prices:', editedPrices);
       await Promise.all(
-        Object.entries(editedPrices).map(([itemId, price]) =>
-          axios.put(`${config.apiUrl}/api/items/${itemId}`, { price })
-        )
+        Object.entries(editedPrices).map(([itemId, price]) => {
+          // Find the item to get its name
+          const item = items.find(i => i.id === parseInt(itemId));
+          return axios.put(`${config.apiUrl}/api/items/${itemId}`, {
+            name: item.name,  // Include the existing name
+            price: price
+          });
+        })
       );
       console.log('[Delivery] Prices updated successfully');
       await fetchData();
@@ -147,9 +166,9 @@ const Delivery = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-gray-900 dark:text-white">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">{t('delivery.title')}</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('delivery.title')}</h1>
         <button
           onClick={() => {
             if (editPrices) {
@@ -174,11 +193,11 @@ const Delivery = () => {
         </div>
       )}
 
-      <div className="bg-white shadow rounded-lg overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 dark:bg-gray-900">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 {t('order.itemName')}
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -192,15 +211,15 @@ const Delivery = () => {
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {orders.map((item) => (
               <tr key={item.itemId}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                   {item.itemName}
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-500">
                   <div className="text-right">{item.totalQuantity}</div>
-                  <div className="text-xs text-gray-400 mt-1">
+                  <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                     {Object.entries(item.userOrders).map(([username, quantity]) => (
                       <div key={username} className="text-right">
                         {username}: {quantity}
@@ -208,14 +227,14 @@ const Delivery = () => {
                     ))}
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-right">
                   {editPrices ? (
                     <input
                       type="number"
                       step="0.01"
                       value={editedPrices[item.itemId]}
                       onChange={(e) => handlePriceChange(item.itemId, e.target.value)}
-                      className="w-24 px-2 py-1 text-right border rounded"
+                      className="w-24 px-2 py-1 text-right border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400"
                     />
                   ) : (
                     new Intl.NumberFormat('de-DE', {
@@ -224,7 +243,7 @@ const Delivery = () => {
                     }).format(items.find(i => i.id === item.itemId)?.price || 0)
                   )}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-medium">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white text-right font-medium">
                   {new Intl.NumberFormat('de-DE', {
                     style: 'currency',
                     currency: 'EUR',
@@ -237,8 +256,8 @@ const Delivery = () => {
                 </td>
               </tr>
             ))}
-            <tr className="bg-gray-50">
-              <td colSpan="3" className="px-6 py-4 text-sm font-medium text-gray-900">
+            <tr className="bg-gray-50 dark:bg-gray-900">
+              <td colSpan="3" className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
                 {t('delivery.totalAmount')}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-bold">
@@ -256,14 +275,14 @@ const Delivery = () => {
         {editPrices ? (
           <button
             onClick={handleSavePrices}
-            className="px-6 py-3 text-base font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="px-6 py-3 text-base font-medium text-white bg-blue-600 dark:bg-blue-500 rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-blue-400"
           >
             {t('common.save')}
           </button>
         ) : (
           <button
             onClick={handleConfirmPayment}
-            className="px-6 py-3 text-base font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+            className="px-6 py-3 text-base font-medium text-white bg-green-600 dark:bg-green-500 rounded-md hover:bg-green-700 dark:hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 dark:focus:ring-green-400"
           >
             {t('delivery.paid')}
           </button>

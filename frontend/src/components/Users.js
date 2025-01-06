@@ -112,37 +112,37 @@ const Users = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-gray-900 dark:text-white">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">{t('users.title')}</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('users.title')}</h1>
         <button
           onClick={() => setShowAddUser(true)}
-          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 dark:bg-blue-500 rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-blue-400"
         >
           {t('users.addUser')}
         </button>
       </div>
 
       {error && (
-        <div className="bg-red-50 border-l-4 border-red-400 p-4">
-          <div className="text-red-700">{error}</div>
+        <div className="bg-red-50 dark:bg-red-900/50 border-l-4 border-red-400 dark:border-red-500 p-4">
+          <div className="text-red-700 dark:text-red-400">{error}</div>
         </div>
       )}
 
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <ul className="divide-y divide-gray-200">
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
+        <ul className="divide-y divide-gray-200 dark:divide-gray-700">
           {users.map((u) => (
             <li key={u.id} className="px-6 py-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-900">{u.username}</p>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">{u.username}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
                     {new Date(u.created_at).toLocaleDateString()}
                   </p>
                 </div>
@@ -153,13 +153,13 @@ const Users = () => {
                         setSelectedUser(u);
                         setShowPasswordForm(true);
                       }}
-                      className="text-sm text-blue-600 hover:text-blue-900"
+                      className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
                     >
                       {t('auth.changePassword')}
                     </button>
                     <button
                       onClick={() => handleDeleteUser(u.id)}
-                      className="text-sm text-red-600 hover:text-red-900"
+                      className="text-sm text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
                     >
                       {t('common.delete')}
                     </button>
@@ -173,9 +173,9 @@ const Users = () => {
 
       {/* Add User Modal */}
       {showAddUser && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
+        <div className="fixed inset-0 bg-gray-500 dark:bg-gray-900 bg-opacity-75 dark:bg-opacity-75 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
               {t('users.addUser')}
             </h3>
             <Formik
@@ -186,44 +186,44 @@ const Users = () => {
               {({ isSubmitting, touched, errors }) => (
                 <Form className="space-y-4">
                   <div>
-                    <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+                    <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                       {t('auth.username')}
                     </label>
                     <Field
                       type="text"
                       name="username"
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400"
                     />
                     {touched.username && errors.username && (
-                      <div className="text-red-500 text-xs mt-1">{errors.username}</div>
+                      <div className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.username}</div>
                     )}
                   </div>
 
                   <div>
-                    <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                    <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                       {t('auth.password')}
                     </label>
                     <Field
                       type="password"
                       name="password"
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400"
                     />
                     {touched.password && errors.password && (
-                      <div className="text-red-500 text-xs mt-1">{errors.password}</div>
+                      <div className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.password}</div>
                     )}
                   </div>
 
                   <div>
-                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                       {t('auth.confirmPassword')}
                     </label>
                     <Field
                       type="password"
                       name="confirmPassword"
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400"
                     />
                     {touched.confirmPassword && errors.confirmPassword && (
-                      <div className="text-red-500 text-xs mt-1">{errors.confirmPassword}</div>
+                      <div className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.confirmPassword}</div>
                     )}
                   </div>
 
@@ -231,14 +231,14 @@ const Users = () => {
                     <button
                       type="button"
                       onClick={() => setShowAddUser(false)}
-                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                      className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600"
                     >
                       {t('common.cancel')}
                     </button>
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                      className="px-4 py-2 text-sm font-medium text-white bg-blue-600 dark:bg-blue-500 rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-blue-400 disabled:opacity-50"
                     >
                       {t('common.save')}
                     </button>
@@ -252,9 +252,9 @@ const Users = () => {
 
       {/* Change Password Modal */}
       {showPasswordForm && selectedUser && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
+        <div className="fixed inset-0 bg-gray-500 dark:bg-gray-900 bg-opacity-75 dark:bg-opacity-75 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
               {t('auth.changePassword')} - {selectedUser.username}
             </h3>
             <Formik
@@ -265,30 +265,30 @@ const Users = () => {
               {({ isSubmitting, touched, errors }) => (
                 <Form className="space-y-4">
                   <div>
-                    <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                    <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                       {t('auth.newPassword')}
                     </label>
                     <Field
                       type="password"
                       name="password"
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400"
                     />
                     {touched.password && errors.password && (
-                      <div className="text-red-500 text-xs mt-1">{errors.password}</div>
+                      <div className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.password}</div>
                     )}
                   </div>
 
                   <div>
-                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                       {t('auth.confirmPassword')}
                     </label>
                     <Field
                       type="password"
                       name="confirmPassword"
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400"
                     />
                     {touched.confirmPassword && errors.confirmPassword && (
-                      <div className="text-red-500 text-xs mt-1">{errors.confirmPassword}</div>
+                      <div className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.confirmPassword}</div>
                     )}
                   </div>
 
@@ -299,14 +299,14 @@ const Users = () => {
                         setShowPasswordForm(false);
                         setSelectedUser(null);
                       }}
-                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                      className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600"
                     >
                       {t('common.cancel')}
                     </button>
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                      className="px-4 py-2 text-sm font-medium text-white bg-blue-600 dark:bg-blue-500 rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-blue-400 disabled:opacity-50"
                     >
                       {t('common.save')}
                     </button>
