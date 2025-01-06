@@ -2,6 +2,10 @@
 
 A web application for managing group community orders and deliveries. This application helps coordinate orders among multiple users, track balances, and manage deliveries efficiently.
 
+https://github.com/com2u/Pickup/blob/main/images/order1.png
+https://github.com/com2u/Pickup/blob/main/images/order2.png
+https://github.com/com2u/Pickup/blob/main/images/overview.png
+
 ## Project Structure
 
 ### Root Directory
